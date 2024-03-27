@@ -1,0 +1,61 @@
+---   
+    - name: Installing MariaDB Server
+      apt:
+        name: '{{ item }}'
+        state: present
+      loop:
+        - mariadb-server
+        - mariadb-client
+        - python3-mysqldb
+
+    - name: add [mysqld] in my.cnf
+      ansible.builtin.lineinfile:
+        path: /etc/mysql/my.cnf
+        regexp: "\\[mysqld]"
+        line: "[mysqld]"
+        state: present
+
+    - name: Edit my.cnf
+      ansible.builtin.lineinfile:
+        path: /etc/mysql/my.cnf
+        regexp: 'bind-address = 0.0.0.0'
+        line: 'bind-address = 0.0.0.0'
+        state: present
+      notify: restart and enable MariaDB
+
+    - name: Removes all anonymous user accounts
+      mysql_user:
+        name: ''
+        host_all: yes
+        state: absent
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    - name: Sets the root password
+      mysql_user:
+        name: root
+        password: "{{ mysql_root_password }}"
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        host: '{{ item }}'
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+      with_items:
+        - localhost
+
+    - name: Create Database 
+      community.mysql.mysql_db: 
+        name: "{{db_name}}"
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        login_host: localhost
+    
+    - name: Create user for database
+      community.mysql.mysql_user:
+        name: "{{db_username}}"
+        password: "{{db_password}}"
+        priv: "{{db_name}}.*:ALL,GRANT"
+        host: '%'
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        state: present
+

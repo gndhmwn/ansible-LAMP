@@ -1,0 +1,40 @@
+---
+
+## FTP ##
+    - name: Install FTP package
+      ansible.builtin.package:
+        name: vsftpd
+        state: present
+
+    # - name: Add user for FTP
+    #   ansible.builtin.user:
+    #     name: kominfo
+    #     # uid: 1040
+    #     group: www-data
+    - name: Add user to the group
+      user:
+        name: diskominfo
+        groups: www-data
+        append: yes
+
+    - name: Set permissions on /var/www/html
+      file:
+        path: /var/www/html/
+        owner: www-data
+        group: www-data
+        mode: '0775'
+
+    - name: Move origin config
+      shell: mv /etc/vsftpd.conf /etc/vsftpd.conf.origin
+
+    - name: override the basic vsftpd configuration
+      template:
+        src: templates/vsftpd/vsftpd.conf
+        dest: /etc/vsftpd.conf
+      notify: restart VSFTPD
+
+    - name: user vsftpd
+      template:
+        src: templates/vsftpd/vsftpd.chroot_list.j2
+        dest: /etc/vsftpd.chroot_list
+      notify: restart VSFTPD

@@ -1,0 +1,46 @@
+---
+
+  #Apache Configuration
+    - name: Install Apache2
+      apt: name=apache2 update_cache=yes state=latest
+
+    - name: Create document root
+      file:
+        path: "/var/www/html/"
+        state: directory
+        owner: "{{ app_user }}"
+        mode: '0755'
+
+    - name: Set up Apache Config
+      template:
+        src: "templates/apache/apache2.conf.j2"
+        dest: "/etc/apache2/{{ http_host }}"
+      notify: reload apache
+
+    - name: Set up Apache virtualhost
+      template:
+        src: "templates/apache/000-default.conf.j2"
+        dest: "/etc/apache2/sites-available/{{ http_conf }}"
+      notify: reload apache
+
+    - name: Enable new site
+      shell: /usr/sbin/a2ensite {{ http_host }}
+      notify: reload apache
+
+    - name: Disable default Apache site
+      shell: /usr/sbin/a2dissite 000-default.conf
+      when: disable_default
+      notify: reload apache
+
+    - name: Add user to the group
+      user:
+        name: diskominfo
+        groups: www-data
+        append: yes
+
+    - name: Set permissions on /var/www/html
+      file:
+        path: /var/www/html/
+        owner: www-data
+        group: www-data
+        mode: '0775'
